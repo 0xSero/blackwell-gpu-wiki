@@ -1,0 +1,19 @@
+/* Slightly tighter content width for better readability */
+.md-grid {
+  max-width: 64rem;
+}
+
+/* Mermaid diagrams: dark-mode-friendly background */
+[data-md-color-scheme="slate"] .mermaid {
+  background: transparent;
+}
+
+/* Tables: zebra striping in dark mode */
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Slightly more breathing room around code blocks */
+.md-typeset pre > code {
+  padding: 1em;
+}
