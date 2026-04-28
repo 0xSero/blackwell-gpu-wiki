@@ -1,6 +1,6 @@
 site_name: Blackwell GPU Wiki
 site_description: SM100 vs SM120, NVFP4, tcgen05, MoE inference on consumer Blackwell — a standalone educational reference.
-site_url: https://blackwell-gpu-wiki.pages.dev/
+site_url: https://0xsero.github.io/blackwell-gpu-wiki/
 repo_url: https://github.com/0xSero/blackwell-gpu-wiki
 repo_name: 0xSero/blackwell-gpu-wiki
 edit_uri: edit/main/docs/
@@ -35,9 +35,6 @@ theme:
     - navigation.indexes
     - navigation.top
     - navigation.tracking
-    - navigation.instant
-    - navigation.instant.progress
-    - toc.integrate
     - toc.follow
     - search.suggest
     - search.highlight
@@ -78,6 +75,10 @@ markdown_extensions:
 
 plugins:
   - search
+
+# Material's built-in Mermaid integration
+# (the superfences custom_fence above routes mermaid blocks to this)
+
 
 extra:
   social:
