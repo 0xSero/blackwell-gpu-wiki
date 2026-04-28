@@ -30,13 +30,14 @@ theme:
     text: Inter
     code: JetBrains Mono
   features:
-    - navigation.tabs
-    - navigation.tabs.sticky
     - navigation.sections
     - navigation.expand
     - navigation.indexes
     - navigation.top
     - navigation.tracking
+    - navigation.instant
+    - navigation.instant.progress
+    - toc.integrate
     - toc.follow
     - search.suggest
     - search.highlight
