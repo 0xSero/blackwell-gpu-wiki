@@ -1,0 +1,141 @@
+site_name: Blackwell GPU Wiki
+site_description: SM100 vs SM120, NVFP4, tcgen05, MoE inference on consumer Blackwell — a standalone educational reference.
+site_url: https://blackwell-gpu-wiki.pages.dev/
+repo_url: https://github.com/0xSero/blackwell-gpu-wiki
+repo_name: 0xSero/blackwell-gpu-wiki
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: green
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: green
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/0xSero/blackwell-gpu-wiki
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - Home: index.md
+  - Overview:
+    - overview/index.md
+    - Architecture: overview/architecture.md
+    - Getting started: overview/getting-started.md
+    - Glossary: overview/glossary.md
+  - Fundamentals:
+    - fundamentals/index.md
+    - GPU execution model: fundamentals/gpu-execution-model.md
+    - Memory hierarchy: fundamentals/memory-hierarchy.md
+    - CUDA pipeline: fundamentals/cuda-pipeline.md
+    - Tensor Cores: fundamentals/tensor-cores.md
+    - Number formats: fundamentals/number-formats.md
+  - Blackwell:
+    - blackwell/index.md
+    - SM100 vs SM120: blackwell/sm100-vs-sm120.md
+    - tcgen05 and TMEM: blackwell/tcgen05-and-tmem.md
+    - Thread-block clusters: blackwell/thread-block-clusters.md
+    - NVFP4 deep dive: blackwell/nvfp4-deep-dive.md
+  - Kernels:
+    - kernels/index.md
+    - CUTLASS: kernels/cutlass.md
+    - FlashAttention: kernels/flashattention.md
+    - FlashInfer: kernels/flashinfer.md
+    - DeepGEMM: kernels/deepgemm.md
+    - Marlin and friends: kernels/marlin-and-friends.md
+    - Triton and TransformerEngine: kernels/triton-and-transformerengine.md
+    - NVSHMEM and DeepEP: kernels/nvshmem-and-deepep.md
+    - Inference engines: kernels/inference-engines.md
+  - Interconnect:
+    - interconnect/index.md
+    - NVLink vs PCIe: interconnect/nvlink-vs-pcie.md
+    - P2P and atomics: interconnect/p2p-and-atomics.md
+    - MoE parallelism: interconnect/moe-parallelism.md
+  - Case studies:
+    - case-studies/index.md
+    - DeepSeek V3 and V4: case-studies/deepseek-v3-v4.md
+    - Kimi K2: case-studies/kimi-k2.md
+    - GLM-5: case-studies/glm-5.md
+    - Generic MoE: case-studies/generic-moe-on-consumer-blackwell.md
+  - Compatibility:
+    - compatibility/index.md
+    - Translating tcgen05: compatibility/translating-tcgen05.md
+    - SMEM budget: compatibility/smem-budget-management.md
+    - Cluster rewriting: compatibility/cluster-rewriting.md
+    - EP-to-TP rewriting: compatibility/ep-to-tp-rewriting.md
+    - Runtime detection: compatibility/runtime-detection.md
+  - Reference:
+    - reference/index.md
+    - Abbreviations: reference/abbreviations.md
+    - Bibliography: reference/bibliography.md
