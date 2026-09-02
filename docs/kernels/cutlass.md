@@ -84,9 +84,9 @@ Detection: for a CUTLASS-based GEMM, manually run a small reference computation 
 
 Fix: use SM120 templates with smaller tile shapes, or set explicit `StageCount`.
 
-**Failure 3: Cluster downgrade**
+**Failure 3: CTA-pair MMA on SM120**
 
-A CUTLASS template with `cta_group::2` (CTA-pair MMA) is launched on SM120. The cluster dim is silently set to (1,1,1); the kernel deadlocks at the first `cluster.sync` or produces wrong outputs.
+A CUTLASS template with `cta_group::2` (CTA-pair MMA) is built for SM120. `ptxas` rejects the `tcgen05.*` instructions at compile time; a precompiled `sm_100a` cubin fails at load with "no kernel image is available". SM120 does support clusters — the failure is the `tcgen05` dependency, and it happens before launch.
 
 Fix: only use CUTLASS templates that have `cta_group::1`. The SM120 template tree enforces this; the SM100 tree does not.
 
