@@ -27,7 +27,7 @@ Triton's compiler:
 
 1. Schedules the iteration space to map to GPU threads
 2. Allocates registers and SMEM
-3. Lowers `tl.dot` to `mma.sync` or `wgmma.async` (or `tcgen05.mma` on SM100, in recent versions)
+3. Lowers `tl.dot` to `mma.sync` (`wgmma.async` on Hopper, or `tcgen05.mma` on SM100 in recent versions)
 4. Handles synchronization, vectorization, and other low-level concerns
 
 The result is a kernel that's **typically 70–90 % as fast as a hand-tuned CUTLASS equivalent**, with **dramatically less code**.
@@ -38,8 +38,8 @@ Triton 3.0+ targets SM80 through SM120. The compiler emits architecture-appropri
 
 - On SM80–SM89: `mma.sync`
 - On SM90: `wgmma.async` where beneficial
-- On SM100: `tcgen05.mma` for large tiles, `wgmma` for smaller (this is in flight; not all paths use `tcgen05` yet)
-- On SM120: `mma.sync` and `wgmma.async`, no `tcgen05`
+- On SM100: `tcgen05.mma` for large tiles, `mma.sync` for smaller (this is in flight; not all paths use `tcgen05` yet)
+- On SM120: `mma.sync` only, no `tcgen05`
 
 The SM120 path is well-supported. Triton has had explicit SM120 testing since Triton 3.0.
 

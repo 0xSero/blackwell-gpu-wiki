@@ -25,7 +25,7 @@ The kernel is essentially self-contained — it doesn't depend on CUTLASS or oth
 
 ## SM100 story
 
-**FA-2** runs on SM100 via its general kernel path, achieving reasonable but sub-optimal throughput (the `wgmma.async` and `mma.sync` paths are used; `tcgen05` is not).
+**FA-2** runs on SM100 via its general kernel path, achieving reasonable but sub-optimal throughput (the `mma.sync` path is used; `tcgen05` is not).
 
 **FA-3** has Hopper support (its main target) and works on SM100 because SM100 is largely Hopper-extended (clusters, TMA, FP8). However, FA-3 doesn't yet exploit `tcgen05` — the speedup of FA-3 vs FA-2 on SM100 is similar to its speedup on Hopper (~30 %), not the much larger speedup that would come from `tcgen05`-based reformulation.
 

@@ -25,7 +25,7 @@ graph TD
 
     DC --> DC_features["• tcgen05.* family<br/>• Tensor Memory (TMEM)<br/>• Cluster size up to 16<br/>• 228 KiB SMEM/block<br/>• HBM3e<br/>• NVLink 5"]
 
-    WS --> WS_features["• mma.sync + wgmma.async only<br/>• No TMEM<br/>• Cluster size 1 only<br/>• 99 KiB SMEM/block<br/>• GDDR7<br/>• PCIe Gen5 only"]
+    WS --> WS_features["• mma.sync only (incl. block-scaled)<br/>• No TMEM<br/>• Cluster size 1 only<br/>• 99 KiB SMEM/block<br/>• GDDR7<br/>• PCIe Gen5 only"]
 
     Both["Common to both"]
     Both --> Both_features["• Tensor Core gen 5<br/>• NVFP4 / MX-FP4 native<br/>• FP6, FP8 native<br/>• Same driver, same toolkit<br/>• Same PTX major version 8"]

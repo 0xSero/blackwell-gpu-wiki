@@ -61,7 +61,7 @@ Properties:
 - **Asynchronous**: warp issues the instruction, continues executing other work; result lands later. Synchronization via `wgmma.commit_group.sync` and `wgmma.wait_group.sync`.
 - **Warp-group**: a *warp group* is 4 warps (128 threads). The MMA is issued by the warp group, not a single warp.
 - **Larger tiles**: m64n128k16 to m64n256k16, vs. mma.sync's m16n8k16. Fewer instructions issued for the same logical work.
-- **Hopper and Hopper-aware Blackwell**: works on SM 9.0 and on SM 10.0 (datacenter Blackwell). **On SM 12.0 it works but Tensor Core throughput is lower than on datacenter parts.**
+- **Hopper only**: `wgmma` requires `sm_90a`. Datacenter Blackwell replaced it with `tcgen05.mma`; workstation Blackwell has only `mma.sync`. **Neither Blackwell branch runs `wgmma`** — `ptxas` rejects it with `Instruction 'wgmma.mma_async' not supported on .target 'sm_120'`.
 
 `wgmma.async` introduced async-everything-on-the-warp-group. Modern Hopper kernels (FA-3, CUTLASS Hopper templates) lean heavily on it.
 
@@ -90,11 +90,12 @@ This deep coupling is why `tcgen05` is *not* a simple ISA addition — the entir
 | Instruction family | SM 7.x | SM 8.x | SM 9.0 | SM 10.0 | SM 12.0 |
 | --- | :---: | :---: | :---: | :---: | :---: |
 | `mma.sync` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `wgmma.async` | | | ✓ | ✓ | ✓¹ |
+| `wgmma.async` | | | ✓ | | |
 | `tcgen05.mma` (single CTA) | | | | ✓ | |
 | `tcgen05.mma` (CTA-pair) | | | | ✓ | |
+| Block-scaled `mma.sync` (`kind::mxf4nvf4` etc.)¹ | | | | | ✓ |
 
-¹ Available but Tensor Core throughput is lower; not the optimal path on consumer Blackwell.
+¹ Requires `sm_120a`; this is how SM 12.0 reaches its native block-scaled FP4/FP6/FP8 without `tcgen05`.
 
 ## How CUTLASS chooses
 
@@ -103,9 +104,9 @@ CUTLASS, the reference high-performance GEMM library, has separate template hier
 - `cutlass/include/cutlass/gemm/collective/sm80_*` — Ampere, `mma.sync`-based
 - `cutlass/include/cutlass/gemm/collective/sm90_*` — Hopper, `wgmma`-based
 - `cutlass/include/cutlass/gemm/collective/sm100_*` — Datacenter Blackwell, `tcgen05`-based
-- `cutlass/include/cutlass/gemm/collective/sm120_*` — Workstation Blackwell, currently `mma.sync`-or-`wgmma`-based
+- `cutlass/include/cutlass/gemm/collective/sm120_*` — Workstation Blackwell, `mma.sync`-based (including the block-scaled variants)
 
-When you instantiate a CUTLASS GEMM, you specify the target architecture; the template selects the appropriate MMA family. The SM100 templates target **`sm_100a`** because they need `tcgen05`. The SM120 templates target **`sm_120` or `sm_120f`** and use the older but still effective `mma.sync` / `wgmma` paths.
+When you instantiate a CUTLASS GEMM, you specify the target architecture; the template selects the appropriate MMA family. The SM100 templates target **`sm_100a`** because they need `tcgen05`. The SM120 templates target **`sm_120a`** (the block-scaled `mma.sync` variants are `a`-only) or **`sm_120` / `sm_120f`** and use the older but still effective `mma.sync` path.
 
 This is why a CUTLASS-built library shipped against one target won't run on the other: the actual instructions in the binary are different.
 
