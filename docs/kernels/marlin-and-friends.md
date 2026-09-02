@@ -28,7 +28,7 @@ Throughput at small batch sizes (decode-style workloads) is competitive with FP8
 | Blackwell DC (SM 10.0) | works, slower than NVFP4 native |
 | Blackwell WS (SM 12.0) | **works**, often the practical fast path |
 
-On workstation Blackwell, when NVFP4 paths are blocked or buggy (DeepGEMM not ported, CUTLASS NVFP4 hitting SMEM cliff), Marlin is a viable alternative. You pay in slightly larger weights (~4 bits → ~4.25 bits with metadata vs NVFP4's 4.5 bits — actually slightly *smaller*) and slightly less accuracy on certain models.
+On workstation Blackwell, when NVFP4 paths are blocked or buggy (DeepGEMM not ported, CUTLASS NVFP4 hitting SMEM cliff), Marlin is a viable alternative. Weight size is not a cost (~4 bits → ~4.25 bits with metadata, slightly *smaller* than NVFP4's 4.5 bits); what you pay is slightly less accuracy on certain models.
 
 ### Common failures
 
