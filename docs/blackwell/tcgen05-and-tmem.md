@@ -120,7 +120,7 @@ NVIDIA's likely reasoning (inferred from the architecture):
 - Consumer workloads (gaming, content creation, light ML) get little benefit from m128n128k64 GEMMs
 - Differentiating datacenter from consumer is a deliberate product strategy
 
-The result: workstation Blackwell has the **same Tensor Core hardware** (gen 5, native FP4/FP6/FP8) but accesses it only through `mma.sync` and `wgmma.async`, both of which are register-bound. So peak FP4 throughput per SM is similar to Hopper-FP8 throughput per SM — useful, but not the 2–3× generational jump that SM100 sees.
+The result: workstation Blackwell has the **same Tensor Core hardware** (gen 5, native FP4/FP6/FP8) but accesses it only through `mma.sync` (including the `sm_120a`-only block-scaled variants), which is register-bound. So peak FP4 throughput per SM is similar to Hopper-FP8 throughput per SM — useful, but not the 2–3× generational jump that SM100 sees.
 
 ## What runs on what, with examples
 
@@ -130,7 +130,7 @@ Concrete examples of code that does and does not run:
 // ✓ Runs on SM 9.0, 10.0, 12.0 — universal
 mma.sync.aligned.m16n8k32.row.col.f32.bf16.bf16.f32 ...;
 
-// ✓ Runs on SM 9.0, 10.0, 12.0 — but lower throughput on 12.0
+// ✓ Runs on SM 9.0 (sm_90a) only — neither Blackwell branch has wgmma
 wgmma.mma_async.sync.aligned.m64n128k16.f32.bf16.bf16 ...;
 
 // ✓ Runs on SM 10.0 only
@@ -164,7 +164,7 @@ using GemmKernel = cutlass::gemm::collective::CollectiveBuilder<
 >::CollectiveOp;
 ```
 
-Switching to `cutlass::arch::Sm120` selects a parallel template tree that uses `mma.sync` and `wgmma.async`, with smaller tile shapes that fit the 99 KiB SMEM ceiling.
+Switching to `cutlass::arch::Sm120` selects a parallel template tree that uses `mma.sync`, with smaller tile shapes that fit the 99 KiB SMEM ceiling.
 
 DeepGEMM, by contrast, currently has only an `Sm100`-targeted code path (as of early 2026); a `Sm120` port is in progress but not landed. Loading DeepGEMM kernels on workstation Blackwell fails at runtime.
 

@@ -42,7 +42,7 @@ Project-specific and Blackwell-specific vocabulary. Cross-linked to the page whe
 
 **`mma.sync`** — universal Tensor Core MMA instruction, available since Volta. Synchronous: warp blocks until result lands in registers. Operates on small tiles (m16n8k16 / m16n8k32). Available on **both** SM100 and SM120.
 
-**`wgmma.async`** — Hopper's warp-group async MMA. Larger tiles, asynchronous. Mostly superseded by `tcgen05.mma` on Blackwell datacenter; still supported on Hopper.
+**`wgmma.async`** — Hopper's warp-group async MMA. Larger tiles, asynchronous. `sm_90a` only: Blackwell datacenter replaced it with `tcgen05.mma`, and Blackwell workstation has only `mma.sync`.
 
 **`tcgen05.mma`** — Blackwell datacenter MMA family. Asynchronous, large-tile (up to m128n128k64 single-CTA, m256n128k64 CTA-pair), accumulator in TMEM. **Datacenter only.** See [`blackwell/tcgen05-and-tmem`](../blackwell/tcgen05-and-tmem.md).
 

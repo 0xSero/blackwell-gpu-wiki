@@ -42,7 +42,7 @@ Compiling them with `nvcc -gencode arch=compute_100,code=sm_100a` produces a fat
 CUTLASS 3.6+ has parallel templates under `sm120_*`. These templates:
 
 - Target `sm_120` (or `sm_120f` for forward-compat)
-- Use `mma.sync` and `wgmma.async` instead of `tcgen05.mma`
+- Use `mma.sync` (including the `sm_120a`-only block-scaled variants) instead of `tcgen05.mma`
 - Allocate accumulators in **registers** (smaller tiles to fit) or stage through SMEM (larger tiles, more SMEM pressure)
 - Use **single-CTA only** (no `cluster_dim > 1`)
 - Restrict pipeline stages to fit the 99 KiB SMEM ceiling
