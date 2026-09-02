@@ -38,7 +38,7 @@ For most non-DSA, non-MoE-EP models, vLLM "just works" on SM120 with appropriate
 
 ```bash
 # Disable kernel paths that don't work
---quantization fp4               # Use NVFP4 (CUTLASS path)
+--quantization modelopt_fp4      # Use NVFP4 (CUTLASS path)
 --kv-cache-dtype fp8_e4m3        # Compact KV
 --enforce-eager                  # Skip CUDA graph capture if it fails
 

@@ -83,8 +83,8 @@ The wiki sits at the **kernel-library and below** layer. It does not teach you h
 
 Three terms that recur on every page:
 
-- **Compute capability** ("CC") — the SM-version pair, e.g., `7.0`, `8.0`, `9.0`, `10.0`, `12.0`. The two-digit string after the dot is the **major version**; the digit before is the **minor version**. Same major = related ISA; different major = potentially incompatible.
-- **`sm_100` / `sm_120` / `sm_100a` / `sm_120f`** — the lowercase compiler-flag forms. Bare `sm_NN` is the architecture. The `a` suffix means "architecture-specific accelerated" (uses non-portable features). The `f` suffix means "forward-compatible" (uses only portable features).
+- **Compute capability** ("CC") — the SM-version pair, e.g., `7.0`, `8.0`, `9.0`, `10.0`, `12.0`. The number before the dot is the **major version**; the digit after it is the **minor version**. Same major = related ISA; different major = potentially incompatible.
+- **`sm_100` / `sm_120` / `sm_100a` / `sm_120f`** — the lowercase compiler-flag forms. Bare `sm_NN` is the architecture. The `a` suffix means "architecture-specific accelerated" (uses non-portable features). The `f` suffix means "family-specific" (runs on this compute capability and later members of the same family).
 - **NVFP4** — NVIDIA's variant of OCP MX-FP4: 4-bit elements grouped into blocks of 16, with a per-block FP8 (E4M3) scale factor. Native on **both** SM100 and SM120 — one of the few features that genuinely works the same on both.
 
 The full list lives in the [glossary](glossary.md).

@@ -6,7 +6,7 @@ How to handle kernels that assume cluster size > 1, when running on hardware whe
 
 A thread-block cluster ([`blackwell/thread-block-clusters`](../blackwell/thread-block-clusters.md)) groups multiple CTAs into a unit that can share SMEM via the distributed-shared-memory abstraction. On SM100, clusters of size 2–8 are routine. On SM120, **the only safe cluster size is 1**: no cluster-shared SMEM, no cluster-pair MMA, no cluster-distributed TMA.
 
-If a kernel was written assuming `cluster_dim > 1`, you must rewrite it. Three approaches.
+If a kernel was written assuming `cluster_dim > 1`, you must rewrite it. Four approaches.
 
 ## Approach 1: collapse to single-CTA
 

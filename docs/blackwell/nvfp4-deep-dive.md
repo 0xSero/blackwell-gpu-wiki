@@ -142,7 +142,7 @@ NVFP4 is competitive with the best INT4 schemes and slightly better than MX-FP4.
 
 ## REAP and NVFP4 together
 
-REAP (REbalanced Activation Pruning) is an MoE-specific pruning technique that removes whole experts from a model. Combined with NVFP4 quantization, REAP produces compact models with minimal quality loss:
+REAP (Router-weighted Expert Activation Pruning) is an MoE-specific pruning technique that removes whole experts from a model. Combined with NVFP4 quantization, REAP produces compact models with minimal quality loss:
 
 - Original GLM-5.1: 744B parameters, BF16 ≈ 1.5 TB
 - REAP-160 (160 of 256 experts retained): 478B parameters, BF16 ≈ 960 GB

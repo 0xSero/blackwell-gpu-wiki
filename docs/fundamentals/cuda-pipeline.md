@@ -74,14 +74,14 @@ NVIDIA introduced two suffixes to manage architecture-specific features:
 | --- | --- | --- |
 | (none) | "Portable" subset of the architecture | `sm_100` |
 | `a` | "Architecture-specific accelerated" — uses non-portable features. Code runs *only* on this exact arch. | `sm_100a` |
-| `f` | "Forward-compatible" — restricted to instructions that will exist on this arch and any future same-major arch | `sm_120f` |
+| `f` | "Family-specific" — restricted to instructions that will exist on this arch and any later member of the same family | `sm_120f` |
 
 Practically:
 
 - **`sm_100a`** allows `tcgen05` instructions, MNNVL fabric calls, and other GB100-specific features. The compiled SASS runs only on a 10.0 device.
 - **`sm_100`** is a more conservative target that omits those features.
 - **`sm_120a`** allows GB202-specific features (e.g., specific Tensor Core variants only present on consumer Blackwell), runs only on 12.0.
-- **`sm_120f`** is a "future-proof" subset that will run on `sm_120` and any later 12.x arch. Useful for libraries shipping to a wide range of consumer Blackwell SKUs.
+- **`sm_120f`** is a "family-specific" subset that will run on `sm_120` and any later 12.x arch. Useful for libraries shipping to a wide range of consumer Blackwell SKUs.
 
 The choice of suffix appears in NVIDIA's own libraries:
 

@@ -10,7 +10,7 @@ Project-specific and Blackwell-specific vocabulary. Cross-linked to the page whe
 
 **`sm_NNa`** — "architecture-specific accelerated." Allows non-portable instructions (e.g., `sm_100a` enables `tcgen05.*`). Code compiled with the `a` suffix runs only on that exact compute capability — not earlier, not later.
 
-**`sm_NNf`** — "forward-compatible." Restricts the code to instructions that will run on `sm_NN` and any later same-major architecture. Useful for code that needs to work across `sm_120` workstation parts and any future `sm_12N` parts.
+**`sm_NNf`** — "family-specific." Restricts the code to instructions that will run on `sm_NN` and any later same-major architecture. Useful for code that needs to work across `sm_120` workstation parts and any future `sm_12N` parts.
 
 ## Architectures and codenames
 
@@ -88,7 +88,7 @@ Project-specific and Blackwell-specific vocabulary. Cross-linked to the page whe
 
 **MNNVL (Multi-Node NVLink)** — NVL72-class fabric extending NVLink across racks (up to 72 GPUs).
 
-**PCIe** — universal host-side interconnect. Gen4 (16 GB/s/lane), Gen5 (32 GB/s/lane). x16 → 32 GB/s or 64 GB/s per direction.
+**PCIe** — universal host-side interconnect. Gen4 (16 GT/s/lane ≈ 2 GB/s per direction), Gen5 (32 GT/s/lane ≈ 4 GB/s per direction). x16 → ~32 GB/s or ~64 GB/s per direction.
 
 **P2P (peer-to-peer)** — direct GPU-to-GPU memory access without staging through host RAM. Enabled if GPUs share a switch or root complex.
 
@@ -130,7 +130,7 @@ Project-specific and Blackwell-specific vocabulary. Cross-linked to the page whe
 
 **Qwen-3 (MoE variants)** — Alibaba's open MoE family.
 
-**REAP** — "REbalanced Activation Pruning," a pruning technique that removes whole experts from a MoE model with minimal quality loss.
+**REAP** — "Router-weighted Expert Activation Pruning," a pruning technique that removes whole experts from a MoE model with minimal quality loss.
 
 ## Compilation pipeline
 
