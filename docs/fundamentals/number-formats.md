@@ -6,7 +6,7 @@ The encoding of every number a Tensor Core multiplies. The diversity of formats 
 
 ```mermaid
 graph LR
-    FP32["FP32<br/>32 bits<br/>1962-vintage IEEE"] --> BF16["BF16<br/>16 bits<br/>2018"]
+    FP32["FP32<br/>32 bits<br/>IEEE 754 (1985)"] --> BF16["BF16<br/>16 bits<br/>2018"]
     FP32 --> FP16["FP16<br/>16 bits<br/>2008"]
     BF16 --> FP8["FP8<br/>(E4M3, E5M2)<br/>8 bits<br/>2022 H100"]
     FP16 --> FP8
@@ -60,9 +60,9 @@ Different formats differ in:
 The OCP-standardized block FP4 format:
 
 - **Block size**: 32 elements
-- **Scale type**: FP6 (E3M2)
+- **Scale type**: E8M0 (8-bit, exponent-only — every scale is a power of two)
 - **Layout**: 32 elements (16 bytes packed) + 1 scale (1 byte)
-- **Effective bits/element**: 32×4/32 + 6/32 ≈ 4.19 bits
+- **Effective bits/element**: 32×4/32 + 8/32 = 4.25 bits
 
 Adopted by AMD, Intel, ARM, and others as a multi-vendor standard.
 
@@ -75,7 +75,7 @@ NVIDIA's variant tightens both:
 - **Layout**: 16 elements (8 bytes packed) + 1 scale (1 byte)
 - **Effective bits/element**: 16×4/16 + 8/16 ≈ 4.5 bits
 
-Slightly more storage than MX-FP4 (~4.5 vs ~4.19 bits/element), but better accuracy in practice on ML workloads — the smaller block size means tensors with non-uniform ranges (e.g., per-channel outliers) get tighter scales.
+Slightly more storage than MX-FP4 (~4.5 vs ~4.25 bits/element), but better accuracy in practice on ML workloads — the smaller block size means tensors with non-uniform ranges (e.g., per-channel outliers) get tighter scales.
 
 **Crucially: native on both SM100 and SM120 Tensor Cores.** This is the rare format that genuinely works the same on both halves of Blackwell.
 

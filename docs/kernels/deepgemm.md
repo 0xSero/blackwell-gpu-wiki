@@ -100,7 +100,7 @@ These environment variables disable DeepGEMM dispatch and route MoE GEMMs throug
 
 **Failure 1: `no kernel image`** — DeepGEMM cubins are SM100-only. See above.
 
-**Failure 2: scale layout mismatch** — DeepGEMM uses NVFP4 layout in a particular form (block-interleaved, FP8 E4M3 scale). If a model artifact was saved in MX-FP4 layout (the OCP standard, block-32 with FP6 E3M2 scale), loading it through DeepGEMM produces silent garbage. Some models ship with both layouts; pick the right one.
+**Failure 2: scale layout mismatch** — DeepGEMM uses NVFP4 layout in a particular form (block-interleaved, FP8 E4M3 scale). If a model artifact was saved in MX-FP4 layout (the OCP standard, block-32 with E8M0 scale), loading it through DeepGEMM produces silent garbage. Some models ship with both layouts; pick the right one.
 
 **Failure 3: JIT cache pollution after a partial port attempt**
 

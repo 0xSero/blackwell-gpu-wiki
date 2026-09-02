@@ -62,9 +62,9 @@ Project-specific and Blackwell-specific vocabulary. Cross-linked to the page whe
 
 **FP4 (E2M1)** — 4-bit float, 1 sign + 2 exponent + 1 mantissa. Tiny range; only useful in **block-quantized** form with a per-block scale.
 
-**MX-FP4** — Open Compute Project Microscaling spec for FP4. 32-element block, per-block FP6 (E3M2) scale.
+**MX-FP4** — Open Compute Project Microscaling spec for FP4. 32-element block, per-block E8M0 (exponent-only) scale.
 
-**NVFP4** — NVIDIA's variant of MX-FP4. **16-element block** (smaller → better dynamic-range tracking), per-block **FP8 (E4M3) scale** (more scale precision than FP6). Native on both SM100 and SM120 Tensor Cores. See [`fundamentals/number-formats`](../fundamentals/number-formats.md).
+**NVFP4** — NVIDIA's variant of MX-FP4. **16-element block** (smaller → better dynamic-range tracking), per-block **FP8 (E4M3) scale** (more scale precision than E8M0). Native on both SM100 and SM120 Tensor Cores. See [`fundamentals/number-formats`](../fundamentals/number-formats.md).
 
 **TF32** — 19-bit Tensor Core internal format on Ampere+. 1 sign + 8 exponent + 10 mantissa. Used for FP32 matmuls accelerated through Tensor Cores.
 
