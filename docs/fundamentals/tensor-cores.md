@@ -68,17 +68,18 @@ Properties:
 ### `tcgen05.mma` — Blackwell datacenter only
 
 ```ptx
-tcgen05.mma.cta_group::1.kind::f4 [%tmem_d], [%tmem_a], [%tmem_b], %scale_a, %scale_b;
-//          ^^^^^^^^^^^^ ^^^^^^^^
-//          single CTA   FP4 inputs
+tcgen05.mma.cta_group::1.kind::mxf4nvf4.block_scale.scale_vec::4X
+    [%tmem_d], %a_desc, %b_desc, %idesc, [%tmem_scale_a], [%tmem_scale_b], %acc;
+//          ^^^^^^^^^^^^ ^^^^^^^^^^^^^^
+//          single CTA   FP4 inputs with block scales
 ```
 
 Properties:
 
-- **Asynchronous + decoupled**: even more so than `wgmma`. Operands and result are addressed by **TMEM addresses**, not registers. Issuing the instruction takes effectively zero time on the issuing warp.
-- **Larger tiles**: up to m128n128k64 single-CTA, m256n128k64 CTA-pair (with `cta_group::2`).
-- **CTA-pair / cluster-2 mode**: two CTAs cooperate via cluster-shared memory and TMEM to issue a single MMA over a larger tile. Requires `.cluster_dim 2,1,1`. **SM100 only.**
-- **Companion ops**: `tcgen05.alloc` for TMEM allocation, `tcgen05.commit` for completion barrier, `tcgen05.cp` for TMEM-to-SMEM copy-out.
+- **Asynchronous + decoupled**: even more so than `wgmma`. A and B are given by SMEM matrix descriptors (A may also live in TMEM); the accumulator and the block scales live in **TMEM**. Registers aren't involved at all. The instruction is issued by a **single thread** and takes effectively zero time on the issuing warp.
+- **Larger tiles**: up to M=128, N=256 single-CTA; M=256, N=256 CTA-pair (with `cta_group::2`).
+- **CTA-pair / cluster-2 mode**: each CTA supplies half of the operands from its SMEM and receives half of the result in its TMEM; a single MMA is issued over the larger tile. Requires a cluster dimension of 2. **SM100 only.**
+- **Companion ops**: `tcgen05.alloc` for TMEM allocation, `tcgen05.commit` to signal completion on an mbarrier, `tcgen05.ld` / `tcgen05.st` to move data between TMEM and registers, `tcgen05.cp` to copy from SMEM into TMEM.
 - **SM100 only.** **Does not work on SM120.**
 
 The reason `tcgen05` exists is that at FP4/FP6 throughput levels, the warp-group MMA approach starts to bottleneck on register file bandwidth — the warp can't issue MMA instructions fast enough to keep the Tensor Core busy. By moving accumulators out of registers and into TMEM, the warp issues one `tcgen05.mma`, the Tensor Core runs to completion in TMEM, and the warp can do other work in parallel.
@@ -126,8 +127,8 @@ The PTX ISA defines specific allowed tile shapes; libraries instantiate combinat
 | `mma.sync` | m16n8k16 | FP16/BF16 |
 | `mma.sync` | m16n8k32 | FP8/FP4 |
 | `wgmma.async` | m64n{16…256}k{16,32} | Hopper FP16/FP8 |
-| `tcgen05.mma` | m{64,128}n{64,128}k{16,32,64} | Datacenter Blackwell, single-CTA |
-| `tcgen05.mma` | m{128,256}n{64,128}k{16,32,64} | Datacenter Blackwell, CTA-pair |
+| `tcgen05.mma` | m{64,128}n{8…256}k{16,32,64} | Datacenter Blackwell, single-CTA |
+| `tcgen05.mma` | m{128,256}n{16…256}k{16,32,64} | Datacenter Blackwell, CTA-pair |
 
 Tile shape selection trades off: larger tiles amortize instruction-issue overhead, smaller tiles fit more occupancy.
 

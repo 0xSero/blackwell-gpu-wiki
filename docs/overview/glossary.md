@@ -44,9 +44,9 @@ Project-specific and Blackwell-specific vocabulary. Cross-linked to the page whe
 
 **`wgmma.async`** — Hopper's warp-group async MMA. Larger tiles, asynchronous. Mostly superseded by `tcgen05.mma` on Blackwell datacenter; still supported on Hopper.
 
-**`tcgen05.mma`** — Blackwell datacenter MMA family. Asynchronous, large-tile (up to m128n128k64 single-CTA, m256n128k64 CTA-pair), accumulator in TMEM. **Datacenter only.** See [`blackwell/tcgen05-and-tmem`](../blackwell/tcgen05-and-tmem.md).
+**`tcgen05.mma`** — Blackwell datacenter MMA family. Asynchronous, large-tile (up to M=128, N=256 single-CTA; M=256, N=256 CTA-pair; K depends on element width, 64 for FP4), accumulator in TMEM. **Datacenter only.** See [`blackwell/tcgen05-and-tmem`](../blackwell/tcgen05-and-tmem.md).
 
-**`tcgen05.alloc` / `tcgen05.commit` / `tcgen05.cp`** — companion instructions for managing TMEM allocation, completion, and copy-out.
+**`tcgen05.alloc` / `tcgen05.commit` / `tcgen05.ld` / `tcgen05.st` / `tcgen05.cp`** — companion instructions: allocate TMEM, hand outstanding async ops to an mbarrier for completion, read/write between TMEM and registers, and copy from SMEM into TMEM (the only direction; results leave TMEM through registers).
 
 ## Number formats
 

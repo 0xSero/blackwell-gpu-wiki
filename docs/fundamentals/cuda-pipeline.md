@@ -154,13 +154,13 @@ You'd debug along the pipeline:
    No `sm_120` cubin → that's why the load fails.
 3. **Check for PTX fallback**: `cuobjdump --dump-ptx libfoo.so | head`. If PTX exists, look at its target:
    ```
-   .version 8.5
+   .version 8.7
    .target sm_100a
    ```
    Target is `sm_100a` → JIT to `sm_120` will fail too (different major-version branch in 1x).
 4. **Read the PTX**: search for `tcgen05`. If present:
    ```
-   tcgen05.alloc.cta_group::1 %rd5, 16384;
+   tcgen05.alloc.cta_group::1.sync.aligned.shared::cta.b32 [%r5], 128;
    ```
    Confirmed: the kernel uses datacenter-only instructions. There's no automatic fallback.
 

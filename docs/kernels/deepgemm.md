@@ -56,14 +56,15 @@ RuntimeError: CUDA error: no kernel image is available for execution on the devi
 **A port is in progress.** The work is non-trivial because every kernel uses `tcgen05` directly:
 
 ```cuda
-// Excerpt from a DeepGEMM kernel:
+// The kind of inline PTX a DeepGEMM kernel contains (illustrative; descriptor setup elided):
 asm volatile(
-    "tcgen05.alloc.cta_group::1.b32 %0, 16384;\n"
-    : "=r"(tmem_base)
+    "tcgen05.alloc.cta_group::1.sync.aligned.shared::cta.b32 [%0], 128;\n"
+    : : "r"(smem_slot)                       // the TMEM address is written to this SMEM location
 );
 asm volatile(
-    "tcgen05.mma.cta_group::1.kind::nvf4 [%0], [%1], [%2], %3, %4;\n"
-    : : "r"(tmem_base), "r"(smem_a), "r"(smem_b), "r"(scale_a), "r"(scale_b)
+    "tcgen05.mma.cta_group::1.kind::mxf4nvf4.block_scale.scale_vec::4X "
+    "[%0], %1, %2, %3, [%4], [%5], p;\n"
+    : : "r"(tmem_d), "l"(a_desc), "l"(b_desc), "r"(idesc), "r"(tmem_sfa), "r"(tmem_sfb)
 );
 ```
 

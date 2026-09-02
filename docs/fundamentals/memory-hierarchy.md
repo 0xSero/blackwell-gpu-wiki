@@ -66,13 +66,13 @@ CUDA exposes static SMEM (sized at compile time, declared with `__shared__`) and
 - **Scope**: warp-group/CTA, allocated via `tcgen05.alloc`
 - **Latency**: hidden behind async TMA / `tcgen05.commit` operations
 
-TMEM exists because the largest `tcgen05.mma` tile (m256n128k64) accumulates into 32 KB of result data — far more than fits in registers, and a poor fit for SMEM (would consume the entire budget). TMEM gives the Tensor Core a private accumulator space, freeing registers and SMEM for other work.
+TMEM exists because `tcgen05.mma` accumulators are big: the largest single-CTA tile, m128n256, is 128×256 FP32 values, or 128 KB, and the CTA-pair m256n256 tile is 256 KB — far more than fits in registers, and a poor fit for SMEM (would consume the entire budget). TMEM gives the Tensor Core a private accumulator space, freeing registers and SMEM for other work.
 
 **SM120 has no equivalent.** Any kernel that uses TMEM must be rewritten to either chunk into smaller tiles (smaller accumulators that fit in registers) or stage accumulators through SMEM (consuming the 99 KiB budget). See [`compatibility/translating-tcgen05`](../compatibility/translating-tcgen05.md).
 
 ### L1 / L2 caches
 
-**L1**: per-SM, shares hardware budget with SMEM. The combined L1+SMEM is 228 KiB on Hopper/Blackwell-DC, 128 KiB on Blackwell-WS. The split between L1 and SMEM is dynamic; the SMEM carveout you request determines L1 size.
+**L1**: per-SM, shares hardware budget with SMEM. The combined L1+SMEM is 256 KB per SM on Hopper/Blackwell-DC (of which up to 228 KB can be configured as SMEM), 128 KB per SM on Blackwell-WS. The split between L1 and SMEM is dynamic; the SMEM carveout you request determines L1 size.
 
 **L2**: device-wide, 40 MB on H100, 50 MB on B100, ~96 MB on B200, somewhat smaller on consumer Blackwell. L2 caches accesses to global memory, hides some HBM latency.
 
@@ -122,7 +122,8 @@ For Tensor Core work, additional specialized loads exist:
 ldmatrix.sync.aligned.x4.shared.b16  ...   // load matrix tile from SMEM (Ampere+)
 cp.async.ca.shared.global             ...   // async copy global→SMEM (Ampere+)
 cp.async.bulk.tensor.shared::cluster.global ... // TMA (Hopper+, datacenter)
-tcgen05.cp.shared::cta::tmem.b64      ...   // TMEM copy (datacenter Blackwell only)
+tcgen05.cp.cta_group::1.128x256b      ...   // SMEM→TMEM copy (datacenter Blackwell only)
+tcgen05.ld.sync.aligned.32x32b.x32.b32 ... // TMEM→registers (datacenter Blackwell only)
 ```
 
 The set of available memory instructions narrows significantly on SM120 compared to SM100. Specifically, **TMEM copies, cluster-shared TMA, and `tcgen05.cp` are absent on SM120**.

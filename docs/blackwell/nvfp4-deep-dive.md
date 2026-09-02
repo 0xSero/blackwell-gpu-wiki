@@ -62,24 +62,30 @@ In practice, NVFP4 reduces a BF16 model to about **28 % of its size**, fitting m
 
 On Blackwell, an NVFP4 GEMM compiles to MMA instructions that consume NVFP4 inputs and produce FP32 (or BF16, or FP8) outputs. The dequantization happens **inside the Tensor Core** — there's no separate "dequant kernel" before the MMA.
 
+Illustrative — descriptor construction and mbarrier setup are elided:
+
 ```ptx
 // Datacenter Blackwell (SM100) — uses tcgen05
-tcgen05.mma.cta_group::1.kind::nvf4
+tcgen05.mma.cta_group::1.kind::mxf4nvf4.block_scale.scale_vec::4X
     [%tmem_d],              // FP32 accumulator in TMEM
-    [%smem_a],              // NVFP4 operand A
-    [%smem_b],              // NVFP4 operand B
-    %scale_a, %scale_b;     // E4M3 scale registers
+    %a_desc,                // SMEM descriptor for NVFP4 operand A
+    %b_desc,                // SMEM descriptor for NVFP4 operand B
+    %idesc,                 // instruction descriptor: shape and types
+    [%tmem_sfa], [%tmem_sfb], // E4M3 scale factors (in TMEM)
+    %acc;
 
-// Workstation Blackwell (SM120) — uses mma.sync chain
-// (For each m16n8k32 sub-tile of the larger logical tile:)
-mma.sync.aligned.m16n8k32.row.col.f32.e2m1.e2m1.f32
+// Workstation Blackwell (SM120, sm_120a) — uses a block-scaled mma.sync chain
+// (For each m16n8k64 sub-tile of the larger logical tile:)
+mma.sync.aligned.kind::mxf4nvf4.block_scale.scale_vec::4X.m16n8k64.row.col.f32.e2m1.e2m1.f32.ue4m3
     {%rd0, %rd1, %rd2, %rd3},     // FP32 accumulator
-    {%ra0, %ra1},                  // NVFP4 operand A (with implicit scale handling)
+    {%ra0, %ra1, %ra2, %ra3},     // NVFP4 operand A
     {%rb0, %rb1},                  // NVFP4 operand B
-    {%rc0, %rc1, %rc2, %rc3};      // FP32 input accumulator
+    {%rc0, %rc1, %rc2, %rc3},      // FP32 input accumulator
+    %sfa, {%bid_a, %tid_a},        // E4M3 scale factors for A (registers) and selector bits
+    %sfb, {%bid_b, %tid_b};        // scale factors for B
 ```
 
-Both paths access the **same Tensor Core hardware**; the difference is the issuing instruction. SM100's `tcgen05.mma.kind::nvf4` issues larger tiles asynchronously into TMEM. SM120's `mma.sync.m16n8k32.f32.e2m1.e2m1.f32` issues smaller tiles synchronously into registers.
+Both paths access the **same Tensor Core hardware**; the difference is the issuing instruction. SM100's `tcgen05.mma.kind::mxf4nvf4` issues larger tiles asynchronously into TMEM. SM120's block-scaled `mma.sync.m16n8k64` issues smaller tiles synchronously into registers.
 
 ## The scale layout problem
 
