@@ -97,7 +97,7 @@ CUDA exposes a `cooperative_groups` namespace that abstracts the warp/block/clus
 
 Two execution-model changes are central to the SM100/SM120 story:
 
-1. **Thread block clusters** (introduced Hopper, expanded Blackwell datacenter): a way to group multiple CTAs that share an SM-cluster's distributed shared memory. SM100 supports up to **cluster size 16**; SM120 supports only **cluster size 1** (no actual clustering). Kernels written for `cluster(2,1,1)` won't behave correctly on SM120.
+1. **Thread block clusters** (introduced Hopper, expanded Blackwell datacenter): a way to group multiple CTAs that share an SM-cluster's distributed shared memory. SM100 supports up to **cluster size 16**; SM120 supports up to **8**. What SM120 lacks is what SM100 builds on top of clusters: CTA-pair MMA and hardware-accelerated multicast TMA.
 
 2. **Async-everything**: SM100's `tcgen05` family decouples Tensor Core execution from warp execution. The MMA fires asynchronously; the warp continues; synchronization is via Tensor Memory or completion barriers. This pushes the SIMT model harder than ever before. SM120 doesn't have `tcgen05`, so it's stuck with the older synchronous `mma.sync` style. Kernels that assumed async overlap on SM100 lose that overlap when ported.
 

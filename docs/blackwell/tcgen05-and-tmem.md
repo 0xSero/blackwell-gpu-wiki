@@ -109,14 +109,13 @@ The largest `tcgen05.mma` tile (m256n128k64) is too big to fit a single CTA's TM
 
 This is one of the reasons SM100 supports thread block clusters > 1: `tcgen05` CTA-pair mode requires it.
 
-**Workstation Blackwell does not support clusters > 1, and therefore cannot use `tcgen05` CTA-pair MMA at all.** A kernel compiled for SM120 must use single-CTA tile shapes only — or, more typically, must not use `tcgen05` at all.
+**Workstation Blackwell has clusters, but no `tcgen05`, so no CTA-pair MMA.** A kernel compiled for SM120 must use single-CTA tile shapes only — or, more typically, must not use `tcgen05` at all.
 
 ## Why workstation Blackwell doesn't have `tcgen05`
 
 NVIDIA's likely reasoning (inferred from the architecture):
 
 - TMEM costs significant die area (256 KB/SM is real silicon)
-- Cluster execution requires extra SM-to-SM linkage (more silicon)
 - Consumer workloads (gaming, content creation, light ML) get little benefit from m128n128k64 GEMMs
 - Differentiating datacenter from consumer is a deliberate product strategy
 

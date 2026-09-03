@@ -1,12 +1,12 @@
 # Cluster rewriting
 
-How to handle kernels that assume cluster size > 1, when running on hardware where clusters are unusable.
+How to handle kernels that assume cluster size > 1, when running on hardware that lacks the SM100-only features built on top of clusters.
 
 ## The situation
 
-A thread-block cluster ([`blackwell/thread-block-clusters`](../blackwell/thread-block-clusters.md)) groups multiple CTAs into a unit that can share SMEM via the distributed-shared-memory abstraction. On SM100, clusters of size 2–8 are routine. On SM120, **the only safe cluster size is 1**: no cluster-shared SMEM, no cluster-pair MMA, no cluster-distributed TMA.
+A thread-block cluster ([`blackwell/thread-block-clusters`](../blackwell/thread-block-clusters.md)) groups multiple CTAs into a unit that can share SMEM via the distributed-shared-memory abstraction. On SM100, clusters of size 2–8 are routine. SM120 has clusters and distributed shared memory too (up to 8 CTAs); what it lacks is **CTA-pair MMA (`cta_group::2`) and hardware-accelerated multicast TMA**.
 
-If a kernel was written assuming `cluster_dim > 1`, you must rewrite it. Three approaches.
+If a kernel was written around either of those, you must rewrite it. The approaches below still apply; only the motivation changes, from "no clusters" to "no pair MMA / no multicast".
 
 ## Approach 1: collapse to single-CTA
 

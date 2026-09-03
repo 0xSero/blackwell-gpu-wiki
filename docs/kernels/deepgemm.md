@@ -72,7 +72,7 @@ The port has to:
 1. Replace each `tcgen05.mma` with a chain of `mma.sync` instructions
 2. Replace TMEM allocations with register or SMEM allocations
 3. Reduce tile shapes to fit within SM120's 99 KiB SMEM ceiling
-4. Avoid `cluster_dim > 1` (no CTA-pair MMA on SM120)
+4. Avoid `cta_group::2` (no CTA-pair MMA on SM120; the cluster itself can stay)
 
 This is **not a recompile** — it's a substantial rewrite of the kernel inner loop. Hence the port is taking time.
 

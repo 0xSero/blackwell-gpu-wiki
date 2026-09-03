@@ -1,6 +1,6 @@
 # Thread block clusters
 
-The unit between a CTA and a grid. Introduced with Hopper, expanded on datacenter Blackwell, **absent on workstation Blackwell**. A surprisingly common cause of kernels that "compile and launch" but produce wrong outputs.
+The unit between a CTA and a grid. Introduced with Hopper, expanded on datacenter Blackwell, **present on workstation Blackwell too** — what SM120 lacks is the two SM100-only features built on top of clusters: CTA-pair MMA and hardware-accelerated TMA multicast.
 
 ## What a cluster is
 
@@ -43,18 +43,17 @@ For `tcgen05.mma.cta_group::2`, clustering is **mandatory**: the largest MMA til
 | Architecture | Max cluster size |
 | --- | --- |
 | Volta (SM 7.0) – Ampere (SM 8.x) | 1 (no clusters) |
-| Hopper (SM 9.0) | up to 8 (typical), 16 (with portable cluster size opt-in) |
+| Hopper (SM 9.0) | up to 8 (portable limit), 16 (with the `cudaFuncAttributeNonPortableClusterSizeAllowed` opt-in) |
 | Blackwell datacenter (SM 10.0) | up to 16 |
-| Blackwell workstation (SM 12.0) | **1 (no clusters)** |
+| Blackwell workstation (SM 12.0) | up to 8 (portable limit; no 16 opt-in) |
 
-The SM120 case is the one that bites: a kernel compiled for `sm_120` with `.cluster_dim 2,1,1` will:
+What bites on SM120 is not the cluster itself but the SM100-only features layered on top of it. A kernel compiled for `sm_120` with `.cluster_dim 2,1,1` will:
 
-1. Compile successfully (the `.cluster_dim` directive is accepted by `ptxas`)
-2. Load successfully on the device
-3. Launch with the cluster dim **silently downgraded to (1,1,1)**
-4. If the kernel uses `cluster.sync` or cluster-shared SMEM addressing, **deadlock** or **read garbage**
+1. Compile, load, and launch with 2 cooperating CTAs; `cluster.sync` and `shared::cluster` addressing work as on Hopper
+2. Fail in `ptxas` if it issues `tcgen05.mma.cta_group::2` — there is no `tcgen05` on SM120
+3. Run, but slowly, if it uses multicast TMA — functional, no hardware acceleration
 
-This is one of the silent-failure classes from [`sm100-vs-sm120`](sm100-vs-sm120.md).
+So cluster-related failures on SM120 are either compile-time errors (`cta_group::2`) or performance problems (multicast), not silent wrong answers. See [`sm100-vs-sm120`](sm100-vs-sm120.md).
 
 ## Cluster-related PTX
 
@@ -66,7 +65,7 @@ cluster.arrive.aligned %sema;     // arrive on a cluster mbarrier
 cluster.wait.aligned %sema;       // wait on a cluster mbarrier
 ```
 
-`cluster.sync` is a cluster-wide barrier. All CTAs in the cluster must reach it; once they all do, all proceed. On SM120 with cluster size 1, `cluster.sync` is a no-op (only one CTA, it just continues), so a kernel that uses it as a sync between CTAs is silently broken.
+`cluster.sync` is a cluster-wide barrier. All CTAs in the cluster must reach it; once they all do, all proceed. It works the same on SM120 as on Hopper and SM100.
 
 ### Addressing
 
@@ -75,7 +74,7 @@ ld.shared::cluster.b32 %r0, [%addr];   // load from another CTA's SMEM in same c
 st.shared::cluster.b32 [%addr], %r0;   // store to another CTA's SMEM
 ```
 
-These reach across SMEMs of co-located SMs. The address space (`shared::cluster`) is wider than per-CTA SMEM. On SM120, `shared::cluster` accesses fall back to local SMEM (because there's no other CTA to address) — accessing a "cluster-shared" address that maps to another CTA's SMEM produces garbage.
+These reach across SMEMs of co-located SMs. The address space (`shared::cluster`) is wider than per-CTA SMEM. SM120 has distributed shared memory too, so `shared::cluster` accesses work there as well.
 
 ### Cluster TMA
 
@@ -83,7 +82,7 @@ These reach across SMEMs of co-located SMs. The address space (`shared::cluster`
 cp.async.bulk.tensor.shared::cluster.global ...;
 ```
 
-Single-instruction asynchronous tensor-tile copy from global memory into cluster-shared SMEM, distributing portions across the participating CTAs. SM100 supports this; SM120 does not (`cp.async.bulk.tensor.shared::cta` only).
+Single-instruction asynchronous tensor-tile copy from global memory into cluster-shared SMEM, distributing portions across the participating CTAs. SM100 has hardware multicast for this. On SM120 the `.multicast::cluster` qualifier is accepted, but the PTX ISA notes it is optimized only for the `sm_90a` / `sm_100a` families and "may have substantially reduced performance on other targets" — in practice, no hardware multicast.
 
 ## Detecting cluster use in a kernel
 
@@ -96,11 +95,11 @@ cuobjdump --dump-elf-symbols mylib.so | grep -i cluster
 cuobjdump --dump-ptx mylib.so | grep -E 'cluster_dim|cluster\.sync|shared::cluster'
 ```
 
-If you see `cluster_dim 2,1,1` or higher, or any `cluster.sync` instruction, the kernel relies on cluster cooperation. Running it on SM120 will likely fail subtly.
+If you see `cluster_dim 2,1,1` or higher, or any `cluster.sync` instruction, the kernel relies on cluster cooperation. On SM120 that alone is fine; what to look for next is `tcgen05.mma.cta_group::2` (fails at compile time) and `.multicast::cluster` (works, but slowly).
 
 ## When kernels don't actually need their declared cluster
 
-Some kernels declare `cluster_dim 2,1,1` for performance reasons (cluster-shared TMA bandwidth) but don't logically require cluster cooperation. For these, a port to SM120 is feasible: rewrite the kernel to use cluster size 1 and direct SMEM staging instead of cluster-shared TMA. The kernel is slower but correct.
+Some kernels declare `cluster_dim 2,1,1` for performance reasons (multicast TMA bandwidth) but don't logically require cluster cooperation. For these, a port to SM120 is feasible: replace the multicast TMA with per-CTA TMA loads (the cluster itself can stay). The kernel is slower but correct.
 
 CUTLASS's SM100-targeted templates often fall into this category. The SM120-targeted templates exist precisely to provide the non-cluster equivalents.
 
@@ -112,9 +111,7 @@ A `tcgen05.mma.cta_group::2` issuing CTA-pair MMA absolutely requires cluster si
 
 Thread block clusters were introduced with Hopper as a way to scale Tensor Core work beyond a single SM's resources. They're a relatively new programming abstraction (pre-2022 there was no equivalent). The Hopper API exposed them via `cooperative_groups::cluster_group`; CUDA C++ supports them via `__cluster_dims__`.
 
-The fact that consumer Blackwell *removed* clusters is unusual — typically NVIDIA preserves features once introduced. The likely reason: cluster cooperation requires extra SM-to-SM hardware linkage (the cluster-shared SMEM bus) that the GB202 die intentionally omits to save area.
-
-The result: code written assuming Hopper-or-newer cluster support unexpectedly fails on SM120, even though its compute capability (12.0) is *newer* than Hopper (9.0). This is the rare case where a higher CC number doesn't strictly include all the features of a lower CC number — which violates a normally reliable assumption.
+Consumer Blackwell kept them. What SM120 lacks relative to Hopper lies elsewhere: no TMEM / `tcgen05`, no hardware TMA multicast, and a 99 KiB rather than 228 KiB SMEM ceiling. The one real case of a higher compute capability lacking a lower one's feature is `wgmma`, which is `sm_90a`-only — neither 10.x nor 12.x has it.
 
 ## Checkpoint
 
