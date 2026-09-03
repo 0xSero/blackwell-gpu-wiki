@@ -4,20 +4,20 @@ The pattern for rewriting datacenter-Blackwell-only PTX (using the `tcgen05` fam
 
 ## The shape mapping
 
-A single `tcgen05.mma` instruction does the work of many `mma.sync` instructions. The translation is a **shape decomposition**:
+A single `tcgen05.mma` instruction does the work of many `mma.sync` instructions. The translation is a **shape decomposition**. `mma.sync` tiles are m16n8kK, so the count is (M/16) × (N/8) × (K/k); on sm_120a the FP4 instruction is the block-scaled `mma.sync.kind::mxf4nvf4.block_scale` with K=64:
 
 | `tcgen05.mma` shape | Equivalent `mma.sync` count | `mma.sync` shape |
 | --- | --- | --- |
-| `m64n64k16` (FP16) | 16 | m16n8k16 (4×4 grid in m,n; 1 in k) |
-| `m64n64k32` (FP8) | 8 | m16n8k32 (4×4 in m,n; 0.5×scaling in k) |
-| `m64n64k64` (FP4) | 4 | m16n8k32 (4×4 in m,n; 2-pass k accumulation) |
-| `m128n128k64` (FP4, single-CTA) | 16 (×2 in n direction) | m16n8k32 |
-| `m128n256k64` (FP4, single-CTA) | 32 | m16n8k32 |
-| `m256n128k64` (FP4, **CTA-pair**) | (no SM120 single-CTA equivalent) | — |
+| `m64n64k16` (FP16) | 32 | m16n8k16 (4×8 grid in m,n; 1 in k) |
+| `m64n64k32` (FP8) | 32 | m16n8k32 (4×8 in m,n; 1 in k) |
+| `m64n64k64` (FP4) | 32 | m16n8k64 (`kind::mxf4nvf4.block_scale`; 4×8 in m,n; 1 in k) |
+| `m128n128k64` (FP4, single-CTA) | 128 | m16n8k64 (8×16 in m,n) |
+| `m128n256k64` (FP4, single-CTA) | 256 | m16n8k64 (8×32 in m,n) |
+| `m256n256k64` (FP4, **CTA-pair**) | (no SM120 single-CTA equivalent) | — |
 
-The largest single-CTA `tcgen05.mma` (m128n256k64) decomposes to 32 `mma.sync m16n8k32` instructions per accumulator tile. With pipelining, this is feasible; without, it serializes.
+The largest single-CTA `tcgen05.mma` (m128n256k64) decomposes to 256 `mma.sync m16n8k64` instructions per accumulator tile — 64 per warp across 4 warps. With pipelining, this is feasible; without, it serializes.
 
-The largest `tcgen05.mma.cta_group::2` shape (m256n128k64) **has no single-CTA equivalent**. To translate it, you must:
+The largest `tcgen05.mma.cta_group::2` shape (m256n256k64) **has no single-CTA equivalent**. To translate it, you must:
 
 - Split the work into two halves
 - Process each half as a single-CTA tile
@@ -30,29 +30,37 @@ This is more invasive than a simple shape decomposition.
 Original SM100 PTX:
 
 ```ptx
-// Allocate 16 KB of TMEM for accumulator
+// Allocate 64 TMEM columns for an m64n64 FP32 accumulator.
+// TMEM is allocated in columns (128 lanes × 32-bit each), not bytes;
+// the whole warp executes alloc, and the TMEM address lands in SMEM.
+.shared .b32 tmem_slot;
 .reg .b32 %tmem_d_addr;
-tcgen05.alloc.cta_group::1 %tmem_d_addr, 16384;
+tcgen05.alloc.cta_group::1.sync.aligned.shared::cta.b32 [tmem_slot], 64;
+tcgen05.relinquish_alloc_permit.cta_group::1.sync.aligned;
+// ... fence + bar.sync, then ld.shared %tmem_d_addr, [tmem_slot] ...
 
-// Issue MMA: D = A * B + D, NVFP4 inputs, FP32 accumulator
-tcgen05.mma.cta_group::1.kind::nvf4
+// Issue MMA from a single thread: D = A * B + D, NVFP4 inputs, FP32 accumulator.
+// A and B come via SMEM matrix descriptors; the block scales live in TMEM.
+// (Descriptor construction and mbarrier init elided.)
+tcgen05.mma.cta_group::1.kind::mxf4nvf4.block_scale.scale_vec::4X
     [%tmem_d_addr],         // accumulator location (TMEM)
-    [%smem_a_desc],         // A descriptor (SMEM)
-    [%smem_b_desc],         // B descriptor (SMEM)
-    %scale_a,
-    %scale_b;
+    %a_desc,                // A descriptor (SMEM)
+    %b_desc,                // B descriptor (SMEM)
+    %idesc,                 // instruction descriptor (shape / types)
+    [%sfa_tmem],            // A scale factors (TMEM)
+    [%sfb_tmem],            // B scale factors (TMEM)
+    %p;                     // accumulate into existing D?
 
-// Wait for completion
-.reg .b64 %sema;
-tcgen05.commit.cta_group::1 %sema;
-tcgen05.wait.cta_group::1 %sema;
+// Wait for completion: commit to an mbarrier, then try_wait on it
+tcgen05.commit.cta_group::1.mbarrier::arrive::one.shared::cluster.b64 [mma_bar];
+// ... mbarrier.try_wait loop on [mma_bar] ...
 
-// Copy result from TMEM to SMEM for downstream
-tcgen05.cp.tmem.shared::cta.b64 [%smem_out], [%tmem_d_addr];
+// Read the result from TMEM into registers for downstream
+tcgen05.ld.sync.aligned.32x32b.x16.b32 {%r0, ..., %r15}, [%tmem_d_addr];
+tcgen05.wait::ld.sync.aligned;
 
 // Free TMEM
-tcgen05.dealloc %tmem_d_addr, 16384;
-tcgen05.relinquish_alloc_permit;
+tcgen05.dealloc.cta_group::1.sync.aligned.b32 %tmem_d_addr, 64;
 ```
 
 Translated SM120 PTX (sketch):
@@ -70,20 +78,18 @@ Translated SM120 PTX (sketch):
 mov.f32 %rd0, 0.0;
 // ... %rd1 through %rd31 similarly ...
 
-// Issue chain of mma.sync m16n8k32 (NVFP4 → FP32)
-mma.sync.aligned.m16n8k32.row.col.f32.e2m1.e2m1.f32
+// Issue chain of block-scaled mma.sync m16n8k64 (NVFP4 → FP32, sm_120a only).
+// The scale factors are passed straight in as register operands.
+mma.sync.aligned.kind::mxf4nvf4.block_scale.scale_vec::4X.m16n8k64.row.col.f32.e2m1.e2m1.f32.ue4m3
     {%rd0, %rd1, %rd2, %rd3},      // accumulator output
-    {%ra0, %ra1},                   // operand A (NVFP4 packed)
+    {%ra0, %ra1, %ra2, %ra3},      // operand A (NVFP4 packed)
     {%rb0, %rb1},                   // operand B (NVFP4 packed)
-    {%rd0, %rd1, %rd2, %rd3};      // accumulator input
+    {%rd0, %rd1, %rd2, %rd3},      // accumulator input
+    %sfa, {%bid_a, %tid_a},        // A block scales (E4M3) + byte-id / thread-id selectors
+    %sfb, {%bid_b, %tid_b};        // B block scales
 
-// ... 31 more similar mma.sync instructions for the other tiles ...
-
-// Apply scales
-.reg .f32 %scale_combined;
-mul.f32 %scale_combined, %scale_a, %scale_b;
-mul.f32 %rd0, %rd0, %scale_combined;
-// ... apply to %rd1 through %rd31 ...
+// ... 7 more similar mma.sync for this warp's remaining sub-tiles
+//     (32 for the whole m64n64 tile, spread across 4 warps) ...
 
 // Sync warp before SMEM store
 bar.sync 0;
@@ -94,7 +100,7 @@ st.shared.f32 [%smem_d_buf+128], %rd1;     // each thread stores its tile
 // ... etc.
 ```
 
-The translated PTX is **substantially longer**: ~50 lines instead of ~20. The instruction count is much higher (32 mma.sync × per-thread + scaling logic).
+The translated PTX is **substantially longer**: ~50 lines instead of ~20. The instruction count is much higher (32 `mma.sync` for one m64n64k64 tile — 8 per warp across 4 warps — plus the operand loads and stores).
 
 ## Performance implications
 
@@ -141,9 +147,9 @@ Decompose the m128 tile into 4 m64 tiles, processed sequentially with register a
 
 ## Scale-related quirks
 
-NVFP4 scales need special handling. The `tcgen05.mma.kind::nvf4` instruction takes scale registers as input and applies them inside the Tensor Core. The `mma.sync.m16n8k32.f32.e2m1.e2m1.f32` instruction takes raw FP4 inputs without integrated scaling.
+NVFP4 scales need special handling. Both sides apply the block scales inside the Tensor Core; what differs is **how the scales are supplied**. `tcgen05.mma.kind::mxf4nvf4.block_scale` reads them from **TMEM**, which means staging them there first in a specific interleaved layout. The block-scaled `mma.sync.kind::mxf4nvf4.block_scale.m16n8k64` takes them as **per-thread register operands**, with byte-id / thread-id selectors picking which scale each thread's fragment uses. The code that moves the scales around is completely different on the two sides — that's the actual translation hazard.
 
-Translation: apply scales as a post-MMA multiply:
+If you're *not* using the block-scaled `mma.sync` (e.g. you dequantize FP4 to FP8/BF16 first and run a plain MMA), apply the scales as a post-MMA multiply instead:
 
 ```ptx
 // After the mma.sync chain:
@@ -184,11 +190,12 @@ def translate_tcgen05(ptx_input, target_arch="sm_120"):
             mma_chain = decompose_to_mma_sync(shape, instr.kind)
             output.extend(mma_chain)
 
-        elif instr.op == "tcgen05.cp.tmem.shared":
-            smem_src = tmem_to_smem[instr.src_addr]
-            output.append(make_shared_to_shared_copy(smem_src, instr.dst_smem))
+        elif instr.op == "tcgen05.ld":
+            # Result is already in registers; map the TMEM address to the
+            # corresponding register/SMEM location
+            output.append(map_tmem_to_regs(instr.src_addr, instr.dst_regs))
 
-        elif instr.op in ("tcgen05.commit", "tcgen05.wait"):
+        elif instr.op == "tcgen05.commit":
             # The mma.sync chain is synchronous; no barrier needed beyond bar.sync
             output.append("bar.sync 0;")
 
