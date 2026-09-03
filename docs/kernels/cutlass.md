@@ -92,7 +92,7 @@ Fix: only use CUTLASS templates that have `cta_group::1`. The SM120 template tre
 
 **Failure 4: NVFP4 scale layout mismatch**
 
-CUTLASS expects NVFP4 scales in a specific layout (block-interleaved, FP8 E4M3). If a model artifact was saved in MX-FP4 layout (block-32 with FP6 E3M2 scales) and loaded into a CUTLASS NVFP4 template, the scales are misinterpreted.
+CUTLASS expects NVFP4 scales in a specific layout (block-interleaved, FP8 E4M3). If a model artifact was saved in MX-FP4 layout (block-32 with E8M0 scales) and loaded into a CUTLASS NVFP4 template, the scales are misinterpreted.
 
 Fix: requantize the artifact, or use a different kernel library whose layout matches.
 

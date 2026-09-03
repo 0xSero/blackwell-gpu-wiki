@@ -33,14 +33,14 @@ The OCP MX-FP4 standard has a similar structure but different parameters:
 | | MX-FP4 (OCP) | NVFP4 (NVIDIA) |
 | --- | --- | --- |
 | Block size | 32 elements | **16 elements** |
-| Scale type | FP6 (E3M2) | **FP8 (E4M3)** |
-| Effective bits/element | ~4.19 | ~4.50 |
+| Scale type | E8M0 (exponent-only) | **FP8 (E4M3)** |
+| Effective bits/element | ~4.25 | ~4.50 |
 | Adopters | AMD, Intel, ARM, NVIDIA | NVIDIA |
 
-NVFP4 trades **slightly more storage** (4.5 vs 4.19 bits/element, ~7 % overhead) for **two practical benefits**:
+NVFP4 trades **slightly more storage** (4.5 vs 4.25 bits/element, ~6 % overhead) for **two practical benefits**:
 
 1. **Smaller blocks** mean tensors with non-uniform value distributions (e.g., per-channel outliers) get tighter scales. Empirically: ~0.3–0.5 perplexity improvement on most LLM benchmarks compared to MX-FP4 at the same effective bitrate.
-2. **FP8 scale** has roughly 16× the precision of FP6 scale, reducing error from scale quantization. This matters for layers with extreme weight magnitudes.
+2. **FP8 scale** carries a 3-bit mantissa, whereas an E8M0 scale is exponent-only (every scale is a power of two), reducing error from scale quantization. This matters for layers with extreme weight magnitudes.
 
 Both formats run natively on Blackwell Tensor Cores (gen 5). Hopper hardware emulates them through FP8 Tensor Cores at reduced throughput.
 
@@ -53,7 +53,7 @@ For a 478-billion-parameter LLM:
 | FP32 | ~1.9 TB |
 | BF16 / FP16 | ~960 GB |
 | FP8 | ~480 GB |
-| MX-FP4 (4.19 b/elem) | ~250 GB |
+| MX-FP4 (4.25 b/elem) | ~254 GB |
 | **NVFP4 (4.5 b/elem)** | **~270 GB** |
 
 In practice, NVFP4 reduces a BF16 model to about **28 % of its size**, fitting models that would otherwise require 8× the VRAM. For workstation Blackwell with 96 GB cards × 4 = 384 GB total VRAM, this enables serving weights up to ~700B parameters with room for KV cache.
